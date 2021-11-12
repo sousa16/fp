@@ -175,7 +175,7 @@ def eh_animal(animal):
 
     def requisitos_predador(animal_aux):
         if requisitos_comuns(animal_aux) and isinstance(animal_aux[3], int) and \
-                animal_aux[3] >= 0 and isinstance(animal_aux[4], int) and animal_aux[4] >= 0 and len(animal_aux) == 5:
+                animal_aux[3] >= 0 and isinstance(animal_aux[4], int) and animal_aux[4] > 0 and len(animal_aux) == 5:
             return True
         return False
 
@@ -252,6 +252,31 @@ def cria_prado(d, r, a, p):
 
     prado = {}
 
+    def primeira_ultima_linhas():
+        prado[0] = '+'
+
+        for x1 in range(1, d[0]):
+            prado[x1] = '-'
+
+        prado[d[0]] = '+'
+        indice_aux = (2 * d[0]) + 1
+
+        for y1 in range(1, d[1]):
+            prado[(d[0] + 1) * y1] = '|'
+            prado[indice_aux] = '|'
+            indice_aux += d[0] + 1
+
+        prado[(d[0] + 1) * d[1]] = '+'
+
+        for x1 in range(1, d[0]):
+            prado[(d[0] + 1) * d[1] + x1] = '-'
+
+        prado[(d[0] + 1) * d[1] + d[0]] = '+'
+
+        return prado
+
+    prado = primeira_ultima_linhas()
+
     for y in range(1, d[1]):
         for x in range(1, d[0]):
             prado[(d[0] + 1) * y + x] = '.'
@@ -264,6 +289,8 @@ def cria_prado(d, r, a, p):
     for animal in a:
         prado[(p[cont])[1] * (d[0] + 1) + (p[cont])[0]] = animal
         cont += 1
+
+    prado = {k: v for k, v in sorted(prado.items())}
 
     return prado
 
@@ -280,11 +307,13 @@ def cria_copia_prado(prado):
 # Seletores
 
 def obter_tamanho_x(prado):
-    return (list(prado.keys()))[0] - 1
+    cantos = [item for item in list(prado.items()) if item[1] == '+']
+    return cantos[1][0] + 1
 
 
 def obter_tamanho_y(prado):
-    return (list(prado.keys()))[-1] // obter_tamanho_x(prado) + 2
+    cantos = [item for item in list(prado.items()) if item[1] == '+']
+    return cantos[2][0] // obter_tamanho_x(prado) + 1
 
 
 def obter_numero_predadores(prado):
@@ -333,18 +362,25 @@ def inserir_animal(prado, animal, posicao):
 # Reconhecedores
 
 def eh_prado(prado):
-    nx, ny = obter_tamanho_x(prado) - 1, obter_tamanho_y(prado) - 1
-    if all(prado[obter_valor_numerico(prado, canto)] == '+' for canto in [[0, 0], [nx, 0], [0, ny], [ny, ny]]) and \
-            all(prado[obter_valor_numerico(prado, [cima, 0])] == '-' for cima in range(1, nx)) and \
-            all(prado[obter_valor_numerico(prado, [baixo, ny])] == '-' for baixo in range(1, nx)) and \
-            all(prado[obter_valor_numerico(prado, [0, esq])] == '|' for esq in range(1, ny)) and \
-            all(prado[obter_valor_numerico(prado, [nx, direita])] == '|' for direita in range(1, ny)):
-        for y in range(1, ny):
-            for x in range(1, nx):
-                if not (prado[obter_valor_numerico(prado, [x, y])].isalpha() or
-                        prado[obter_valor_numerico(prado, [x, y])] in ['.', '@']):
-                    return False
+
+    nx = obter_tamanho_x(prado)
+    ny = obter_tamanho_y(prado)
+
+    def eh_prado_aux(p):
+        indice_aux = (2 * (nx - 1)) + 1
+
+        for y1 in range(1, ny - 1):
+            if p[nx * y1] != '|' or p[indice_aux] != '|':
+                return False
+            indice_aux += nx
         return True
+
+    if prado[0] == '+' and all(prado[cont] == '-' for cont in range(1, nx - 1)) and prado[nx - 1] == '+' and \
+            prado[nx * (ny - 1)] == '+' and all(prado[nx * (ny - 1) + cont] == '-' for cont in range(1, nx - 1)) and \
+            prado[nx * (ny - 1) + nx - 1] == '+' and eh_prado_aux(prado):
+                    return True
+
+    return False
 
 
 def eh_posicao_animal(prado, posicao):
@@ -354,17 +390,13 @@ def eh_posicao_animal(prado, posicao):
 
 
 def eh_posicao_obstaculo(prado, posicao):
-    if 0 < posicao[0] < obter_tamanho_x(prado) - 1 and 0 < posicao[1] < obter_tamanho_y(prado) - 1 and \
-            prado[obter_valor_numerico(prado, posicao)] == '@':
-        return True
-    elif posicao[0] in [0, obter_tamanho_x(prado) - 1] or posicao[1] in [0, obter_tamanho_y(prado) - 1]:
+    if prado[obter_valor_numerico(prado, posicao)] in ['@', '+', '-', '|']:
         return True
     return False
 
 
 def eh_posicao_livre(prado, posicao):
-    if 0 < posicao[0] < obter_tamanho_x(prado) - 1 and 0 < posicao[1] < obter_tamanho_y(prado) - 1 and \
-            prado[obter_valor_numerico(prado, posicao)] == '.':
+    if prado[obter_valor_numerico(prado, posicao)] == '.':
         return True
     return False
 
